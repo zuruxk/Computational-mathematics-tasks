@@ -109,40 +109,6 @@ RigidBody SumRB (const RigidBody &r1, const RigidBody &r2) {
     return res;
 }
 
-double SolveEuler (RigidBody &rb, const Context &context, double h, double cur_time) {
-    rb = SumRB(rb, MulRB(f_rigidbody(rb, context, cur_time), h));
-    dmat3 R = dmat3(glm::normalize(rb.q));
-    dvec3 omega = R * context.I_inv * glm::transpose(R) * rb.L;
-
-    double E_kin_trans = 0.5 * rb.l.length() * rb.l.length() * context.mass;
-    double E_kin_rot = 0.5 * glm::dot(omega, rb.L);
-    double E_pot = context.mass * context.g * rb.r.y;
-
-    double half_height = pow(context.volume, 1.0/3.0) / 2;
-    double current_rho;
-    
-    if (rb.r.y > half_height) {
-        current_rho = context.ro_air;
-    }
-    else if (rb.r.y < -half_height) {
-        current_rho = context.ro_liquid;
-    }
-    else {
-        double immersion = (half_height - rb.r.y) / (2 * half_height);
-        immersion = std::max(0.0, std::min(1.0, immersion));
-        current_rho = context.ro_air * (1 - immersion) + context.ro_liquid * immersion;
-    }
-    
-    double E_pot_arch = -current_rho * context.volume * context.g * rb.r.y;
-    double total_energy = E_kin_trans + E_kin_rot + E_pot + E_pot_arch;
-
-    if (!context.drag_enabled) {
-        std::cout<<"Energy check: "<<total_energy<<std::endl;
-    }
-
-    return total_energy;
-}
-
 double SolveRungeKutta4 (RigidBody &rb, const Context &context, double h, double cur_time) {
     RigidBody k1, k2, k3, k4;
     

@@ -33,6 +33,4 @@ RigidBody f_rigidbody (const RigidBody &rb, const Context &context, double time)
 RigidBody MulRB (const RigidBody &rb, double num);
 RigidBody SumRB (const RigidBody &r1, const RigidBody &r2);
 
-
-double SolveEuler (RigidBody &rb, const Context &context, double h, double cur_time);
 double SolveRungeKutta4 (RigidBody &rb, const Context &context, double h, double cur_time);
