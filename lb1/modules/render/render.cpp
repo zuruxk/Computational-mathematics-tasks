@@ -1,219 +1,397 @@
 #include <cmath>
 #include <ctime>
-#include <sstream>
 #include <iomanip>
 #include <iostream>
 #include <vector>
-
 #include "render.hpp"
 
-#define WIDTH 1000
-#define HEIGHT 600
-#define TIME_SCALE 1000
+#define WIDTH 1200
+#define HEIGHT 700
+
+double simulation_speed = 17.0;
+bool real_time_mode = true;
+double physics_time = 0.0;
+double last_real_time = 0.0;
 
 double OldTime = -1, DeltaTime;
-RigidBody rb;
-Context context;
+std::vector<Context> contexts;
+std::vector<RigidBody> bodies;
+int current_body = 0;
 double simulation_time = 0.0;
 
-void DrawCube (int size) {
+void DrawCube(double size) {
+    double s = size / 2.0;
     glBegin(GL_QUADS);
-
-    glColor3f(0.0f, size, 0.0f);
-    glVertex3f(size, size, -size);
-    glVertex3f(-size, size, -size);
-    glVertex3f(-size, size, size);
-    glVertex3f(size, size, size);
-
-    glColor3f(size, 0.5f, 0.0f);
-    glVertex3f(size, -size, size);
-    glVertex3f(-size, -size, size);
-    glVertex3f(-size, -size, -size);
-    glVertex3f(size, -size, -size);
-
-    glColor3f(size, 0.0f, 0.0f);
-    glVertex3f(size, size, size);
-    glVertex3f(-size, size, size);
-    glVertex3f(-size, -size, size);
-    glVertex3f(size, -size, size);
-
-    glColor3f(size, size, 0.0f);
-    glVertex3f(size, -size, -size);
-    glVertex3f(-size, -size, -size);
-    glVertex3f(-size, size, -size);
-    glVertex3f(size, size, -size);
-
-    glColor3f(0.0f, 0.0f, size);
-    glVertex3f(-size, size, size);
-    glVertex3f(-size, size, -size);
-    glVertex3f(-size, -size, -size);
-    glVertex3f(-size, -size, size);
-
-    glColor3f(size, 0.0f, size);
-    glVertex3f(size, size, -size);
-    glVertex3f(size, size, size);
-    glVertex3f(size, -size, size);
-    glVertex3f(size, -size, -size);
-
-    glEnd();
-}
-
-void DrawAxes () {
-    glBegin(GL_LINES);
 
     glColor3f(1.0f, 0.0f, 0.0f);
-    glVertex3f(-500.0f, 0.0f, 0.0f);
-    glVertex3f(500.0f, 0.0f, 0.0f);
+    glVertex3f(s, s, -s);
+    glVertex3f(-s, s, -s);
+    glVertex3f(-s, s, s);
+    glVertex3f(s, s, s);
 
     glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(0.0f, -500.0f, 0.0f);
-    glVertex3f(0.0f, 500.0f, 0.0f);
+    glVertex3f(s, -s, s);
+    glVertex3f(-s, -s, s);
+    glVertex3f(-s, -s, -s);
+    glVertex3f(s, -s, -s);
 
     glColor3f(0.0f, 0.0f, 1.0f);
-    glVertex3f(0.0f, 0.0f, -500.0f);
-    glVertex3f(0.0f, 0.0f, 500.0f);
+    glVertex3f(s, s, s);
+    glVertex3f(-s, s, s);
+    glVertex3f(-s, -s, s);
+    glVertex3f(s, -s, s);
+
+    glColor3f(1.0f, 1.0f, 0.0f);
+    glVertex3f(s, -s, -s);
+    glVertex3f(-s, -s, -s);
+    glVertex3f(-s, s, -s);
+    glVertex3f(s, s, -s);
+
+    glColor3f(1.0f, 0.0f, 1.0f);
+    glVertex3f(-s, s, s);
+    glVertex3f(-s, s, -s);
+    glVertex3f(-s, -s, -s);
+    glVertex3f(-s, -s, s);
+
+    glColor3f(0.0f, 1.0f, 1.0f);
+    glVertex3f(s, s, -s);
+    glVertex3f(s, s, s);
+    glVertex3f(s, -s, s);
+    glVertex3f(s, -s, -s);
     
     glEnd();
 }
 
-void DrawWaterSurface (float y_level) {
-    glColor4f(0.0f, 0.5f, 1.0f, 0.3f);
+void DrawSphere(double radius) {
+    glutSolidSphere(radius, 20, 20);
+}
+
+void DrawCylinder(double radius, double height) {
+    GLUquadric *quadric = gluNewQuadric();
+
+    glRotated(-90, 1, 0, 0);
+
+    glPushMatrix();
+    glTranslated(0, 0, -height/2); 
+    gluCylinder(quadric, radius, radius, height, 20, 20);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslated(0, 0, -height/2);
+    gluDisk(quadric, 0, radius, 20, 1);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslated(0, 0, +height/2);
+    gluDisk(quadric, 0, radius, 20, 1);
+    glPopMatrix();
+    
+    gluDeleteQuadric(quadric);
+}
+
+void DrawAxes() {
+    glBegin(GL_LINES);
+    
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(-30.0f, 0.0f, 0.0f);
+    glVertex3f(30.0f, 0.0f, 0.0f);
+    
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(0.0f, -30.0f, 0.0f);
+    glVertex3f(0.0f, 30.0f, 0.0f);
+    
+    glColor3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(0.0f, 0.0f, -30.0f);
+    glVertex3f(0.0f, 0.0f, 30.0f);
+    
+    glEnd();
+}
+
+void DrawWaterSurface(float y_level) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
+
+    glColor4f(0.0f, 0.5f, 1.0f, 0.2f);
+
     glBegin(GL_QUADS);
-    glVertex3f(-500.0f, y_level, -500.0f);
-    glVertex3f(500.0f, y_level, -500.0f);
-    glVertex3f(500.0f, y_level, 500.0f);
-    glVertex3f(-500.0f, y_level, 500.0f);
+    glVertex3f(-18.0f, y_level, -18.0f);
+    glVertex3f(18.0f, y_level, -18.0f);
+    glVertex3f(18.0f, y_level, 18.0f);
+    glVertex3f(-18.0f, y_level, 18.0f);
+    glEnd();
+
+    glColor4f(0.0f, 0.3f, 0.8f, 0.1f);
+    glBegin(GL_LINES);
+    for (int i = -18; i <= 18; i += 3) {
+        glVertex3f(i, y_level, -18.0f);
+        glVertex3f(i, y_level, 18.0f);
+        glVertex3f(-18.0f, y_level, i);
+        glVertex3f(18.0f, y_level, i);
+    }
     glEnd();
     
     glDisable(GL_BLEND);
 }
 
-void Reshape (int W, int H) {
+void DrawBottom(float y_level) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glColor4f(0.8f, 0.6f, 0.2f, 0.8f);
+    glBegin(GL_QUADS);
+    glVertex3f(-18.0f, y_level, -18.0f);
+    glVertex3f(18.0f, y_level, -18.0f);
+    glVertex3f(18.0f, y_level, 18.0f);
+    glVertex3f(-18.0f, y_level, 18.0f);
+    glEnd();
+
+    glColor4f(0.0f, 0.3f, 0.8f, 0.1f);
+    glBegin(GL_LINES);
+    for (int i = -18; i <= 18; i += 3) {
+        glVertex3f(i, y_level, -18.0f);
+        glVertex3f(i, y_level, 18.0f);
+        glVertex3f(-18.0f, y_level, i);
+        glVertex3f(18.0f, y_level, i);
+    }
+    glEnd();
+    
+    glDisable(GL_BLEND);
+}
+
+void Reshape(int W, int H) {
     glViewport(0, 0, W, H);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60, (double)W / H, 1, 500);
+    gluPerspective(45, (double)W / H, 1, 200);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 }
 
-void Display () {
+void Display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    double energy = SolveRungeKutta4(rb, context, DeltaTime, simulation_time);
-
-    static double last_print = 0;
-    if (OldTime - last_print > 1.0) {
-        std::cout<<"Time: "<<std::fixed<<std::setprecision(2)<<simulation_time<<"s, pos: "<<rb.r.y<<"m"<<std::endl;
-        last_print = simulation_time;
+    
+    for (size_t i = 0; i < bodies.size(); i++) {
+        double energy = SolveRungeKutta4(bodies[i], contexts[i], DeltaTime, physics_time, i, current_body);
+        
+        double bottom_y = bodies[i].r.y;
+        switch (contexts[i].body_type) {
+            case BODY_CUBE: bottom_y -= CUBE_SIZE/2; break;
+            case BODY_SPHERE: bottom_y -= SPHERE_RADIUS; break;
+            case BODY_CYLINDER: bottom_y -= CYLINDER_HEIGHT/2; break;
+        }
+        
+        if (bottom_y < -15.0) {
+            bodies[i].r.y = -15.0 + (contexts[i].body_type == BODY_SPHERE ? SPHERE_RADIUS : 
+                           (contexts[i].body_type == BODY_CUBE ? CUBE_SIZE/2 : CYLINDER_HEIGHT/2));
+            bodies[i].l = dvec3(0, 0, 0);
+            bodies[i].L = dvec3(0, 0, 0);
+        }
     }
-
-    glPushMatrix();
-        gluLookAt(80, 100, 300, 
-        0, 10, -20,
-        0, 1, 0 );
-
+    
+    static double last_print = 0;
+    if (physics_time - last_print > 1.0) {
+        std::cout << "\rTime: " << std::fixed << std::setprecision(2) 
+                  << physics_time << "s | Speed: " << simulation_speed << "x | "
+                  << "Mode: " << (contexts[0].drag_enabled ? "DRAG" : "NO DRAG") << " | "
+                  << "Time mode: " << (real_time_mode ? "REAL" : "FIXED") << "    " << std::flush;
+        
+        static int counter = 0;
+        if (counter++ % 5 == 0) {
+            std::cout << std::endl;
+            for (size_t i = 0; i < bodies.size(); i++) {
+                std::cout << "  Body " << i << " pos: " << bodies[i].r.y << "m" << std::endl;
+            }
+        }
+        last_print = physics_time;
+    }
+    
+    glLoadIdentity();
+    gluLookAt(30, 15, 50,
+              0, 0, 0,
+              0, 1, 0);
+    
     DrawAxes();
     DrawWaterSurface(0.0f);
-    glTranslated(rb.r.x, rb.r.y, rb.r.z);
-    rb.q = glm::normalize(rb.q);
-
-    double angle = glm::degrees(2.0 * acos(rb.q.w));
-    glRotated(angle, rb.q.x, rb.q.y, rb.q.z);
+    DrawBottom(-15.0f);
     
-    DrawCube(SIZE);
+    for (size_t i = 0; i < bodies.size(); i++) {
+        glPushMatrix();
 
-    glPointSize(5);
-    glBegin(GL_POINTS);
-    glColor3f(1,0,0);
-    glVertex3f(0,0,0);
-    glEnd();
+        glTranslated(bodies[i].r.x, bodies[i].r.y, bodies[i].r.z - 10.0 * i);
 
-    glPopMatrix();
-    glFlush();
+        dquat q = normalize(bodies[i].q);
+        double angle = degrees(2.0 * acos(q.w));
+        glRotated(angle, q.x, q.y, q.z);
+        
+        switch (contexts[i].body_type) {
+            case BODY_CUBE:
+                glColor3f(1.0f, 0.0f, 0.0f);
+                DrawCube(CUBE_SIZE);
+                break;
+            case BODY_SPHERE:
+                glColor3f(0.0f, 1.0f, 0.0f);
+                DrawSphere(SPHERE_RADIUS);
+                break;
+            case BODY_CYLINDER:
+                glColor3f(0.0f, 0.0f, 1.0f);
+                DrawCylinder(CYLINDER_RADIUS, CYLINDER_HEIGHT);
+                break;
+        }
+        
+        glPointSize(5);
+        glBegin(GL_POINTS);
+        glColor3f(1, 1, 1);
+        glVertex3f(0, 0, 0);
+        glEnd();
+        
+        glPopMatrix();
+    }
+    
     glutSwapBuffers();
 }
 
-void Idle () {
-    long Time = clock();
+void Idle() {
+    long current_clock = clock();
+    double current_real_time = (double)current_clock / CLOCKS_PER_SEC;
+    
     if (OldTime == -1) {
-        OldTime = Time;
+        OldTime = current_clock;
+        last_real_time = current_real_time;
     }
     
-    DeltaTime = (double)(Time - OldTime) / CLOCKS_PER_SEC;
-    if (DeltaTime > 0.02) DeltaTime = 0.02;
+    if (real_time_mode) {
+        double real_dt = current_real_time - last_real_time;
+
+        if (real_dt > 0.05) real_dt = 0.05;
+
+        DeltaTime = real_dt * simulation_speed;
+        
+        last_real_time = current_real_time;
+    }
+    else {
+        DeltaTime = (double)(current_clock - OldTime) / CLOCKS_PER_SEC;
+        if (DeltaTime > 0.02) DeltaTime = 0.02;
+        DeltaTime *= simulation_speed;
+    }
     
-    simulation_time += DeltaTime;
+    physics_time += DeltaTime;
+    simulation_time = physics_time;
     
-    OldTime = Time;
+    OldTime = current_clock;
     glutPostRedisplay();
 }
 
-void Keyboard (unsigned char Key, int MouseX, int MouseY) {
-    if (Key == 27)
-    exit(0);
-
+void Keyboard(unsigned char Key, int MouseX, int MouseY) {
+    if (Key == 27) exit(0);
+    
     if (Key == 'd' || Key == 'D') {
-        context.drag_enabled = !context.drag_enabled;
-        std::cout<<"Drag "<<(context.drag_enabled ? "ENABLED" : "DISABLED")<<std::endl;
+        for (auto &context : contexts) {
+            context.drag_enabled = !context.drag_enabled;
+        }
+        std::cout << "Drag " << (contexts[0].drag_enabled ? "ENABLED" : "DISABLED") << std::endl;
+    }
+    
+    if (Key == 'r' || Key == 'R') {
+        for (size_t i = 0; i < bodies.size(); i++) {
+            bodies[i].q = dquat(1, 0, 0, 0);
+            bodies[i].l = dvec3(0, 0, 0);
+            bodies[i].L = dvec3(0.5, 0.2, 0.1);
+        }
+        bodies[0].r = dvec3(0, 20, 0);
+        bodies[1].r = dvec3(0, 20, 20);
+        bodies[2].r = dvec3(10, 20, 10);
+
+        physics_time = 0.0;
+        std::cout << "Position reset" << std::endl;
+    }
+    
+    if (Key == 'c' || Key == 'C') {
+        current_body = (current_body + 1) % bodies.size();
+        std::cout << "Selected body " << current_body << std::endl;
     }
 
-    if (Key == 'r' || Key == 'R') {
-        rb.r = dvec3(0, 5, -20);
-        rb.l = dvec3(0, 0, 0);
-        rb.L = dvec3(10, 5, 0);
-        rb.q = dquat(1, 0, 0, 0);
-        std::cout<<"Position reset"<< std::endl;
+    if (Key == '+') {
+        simulation_speed *= 1.5;
+        std::cout << "Simulation speed: " << simulation_speed << "x" << std::endl;
+    }
+    
+    if (Key == '-') {
+        simulation_speed /= 1.5;
+        if (simulation_speed < 0.1) simulation_speed = 0.1;
+        std::cout << "Simulation speed: " << simulation_speed << "x" << std::endl;
+    }
+    
+    if (Key == ' ') {
+        real_time_mode = !real_time_mode;
+        std::cout << "Time mode: " << (real_time_mode ? "REAL TIME" : "FIXED STEP") << std::endl;
+    }
+    
+    if (Key == 'p' || Key == 'P') {
+        static bool paused = false;
+        paused = !paused;
+        if (paused) {
+            glutIdleFunc(NULL);
+            std::cout << "PAUSED" << std::endl;
+        }
+        else {
+            glutIdleFunc(Idle);
+            last_real_time = (double)clock() / CLOCKS_PER_SEC;
+            std::cout << "RESUMED" << std::endl;
+        }
     }
 }
 
-void Run (int argc, char *argv[]) {
-    double mass = 60.0;
-    double side = 0.464;
-    double volume = side * side * side;
-
-    context.M_inv = 1.0 / mass;
-
-    double I = (1.0/6.0) * mass * side * side;
-    for (int i = 0; i < 3; i++)
-        context.I_inv[i][i] = 1.0 / I;
-
-    context.mass = mass;
-    context.volume = volume;
-    context.ro_liquid = 800.0;
-    context.ro_air = 1.2;
-    context.g = 9.81;
-    context.drag_coef = 150.0;
-    context.drag_enabled = false;
-    context.start_time = 0.0;
-
-    rb.r = dvec3(0, 70, -20);
-    rb.q = dquat(1, 0, 0, 0);
-    rb.l = dvec3(0, 0, 0);
-    rb.L = dvec3(10, 5, 0);
-
+void Run(int argc, char *argv[]) {
+    bodies.resize(3);
+    contexts.resize(3);
+    
+    InitCube(contexts[0], 2400.0);
+    bodies[0].r = dvec3(0, 20, 0);
+    bodies[0].q = dquat(1, 0, 0, 0);
+    bodies[0].l = dvec3(0, 0, 0);
+    bodies[0].L = dvec3(400.0, 200.0, 100.0);
+    
+    InitSphere(contexts[1], 1000.0);
+    bodies[1].r = dvec3(0, 20, 20);
+    bodies[1].q = dquat(1, 0, 0, 0);
+    bodies[1].l = dvec3(0, 0, 0);
+    bodies[1].L = dvec3(0.3, 0.4, 0.2);
+    
+    InitCylinder(contexts[2], 255.0);
+    bodies[2].r = dvec3(10, 20, 10);
+    bodies[2].q = dquat(1, 0, 0, 0);
+    bodies[2].l = dvec3(0, 0, 0);
+    bodies[2].L = dvec3(20.0, 10.0, 30.0);
+    
+    for (auto &context : contexts) {
+        context.ro_liquid = 977.0;
+        context.ro_air = 1.2;
+        context.g = 9.81;
+        context.drag_coef_linear = 0.5;
+        context.drag_enabled = true;
+        context.start_time = 0.0;
+    }
+    
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(WIDTH, HEIGHT);
     glutInitWindowPosition(0, 0);
-    glutCreateWindow("Body motion in fluid");
-
+    glutCreateWindow("Bodies motion in fluid");
+    
     glClearColor(0.8, 0.8, 0.8, 0);
-
+    glEnable(GL_DEPTH_TEST);
+    
     glutReshapeFunc(Reshape);
     glutDisplayFunc(Display);
     glutIdleFunc(Idle);
     glutKeyboardFunc(Keyboard);
-
-    glEnable(GL_DEPTH_TEST);
-
-    std::cout<<"Controls:\n";
-    std::cout<<"  ESC - exit\n";
-    std::cout<<"  D - toggle drag force\n";
-    std::cout<<"  R - reset position\n";
-
+    
+    std::cout << "Controls:\n";
+    std::cout << "  ESC - exit\n";
+    std::cout << "  D - toggle drag force\n";
+    std::cout << "  R - reset position\n";
+    std::cout << "  C - switch selected body\n";
+    std::cout << "  P - pause\n";
+    
     glutMainLoop();
 }
