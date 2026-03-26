@@ -8,7 +8,7 @@
 #define WIDTH 1200
 #define HEIGHT 700
 
-double simulation_speed = 17.0;
+double simulation_speed = 1.0;
 bool real_time_mode = true;
 double physics_time = 0.0;
 double last_real_time = 0.0;
@@ -262,7 +262,7 @@ void Idle() {
     if (real_time_mode) {
         double real_dt = current_real_time - last_real_time;
 
-        if (real_dt > 0.05) real_dt = 0.05;
+        if (real_dt > 0.002) real_dt = 0.002;
 
         DeltaTime = real_dt * simulation_speed;
         
@@ -270,7 +270,7 @@ void Idle() {
     }
     else {
         DeltaTime = (double)(current_clock - OldTime) / CLOCKS_PER_SEC;
-        if (DeltaTime > 0.02) DeltaTime = 0.02;
+        if (DeltaTime > 0.002) DeltaTime = 0.002;
         DeltaTime *= simulation_speed;
     }
     
@@ -346,29 +346,29 @@ void Run(int argc, char *argv[]) {
     contexts.resize(3);
     
     InitCube(contexts[0], 2400.0);
-    bodies[0].r = dvec3(0, 20, 0);
+    bodies[0].r = dvec3(0, 5, 0);
     bodies[0].q = dquat(1, 0, 0, 0);
     bodies[0].l = dvec3(0, 0, 0);
-    bodies[0].L = dvec3(400.0, 200.0, 100.0);
+    bodies[0].L = dvec3(300.0, 2.0, 1.0);
     
     InitSphere(contexts[1], 1000.0);
-    bodies[1].r = dvec3(0, 20, 20);
+    bodies[1].r = dvec3(0, 5, 20);
     bodies[1].q = dquat(1, 0, 0, 0);
     bodies[1].l = dvec3(0, 0, 0);
-    bodies[1].L = dvec3(0.3, 0.4, 0.2);
+    bodies[1].L = dvec3(0.0, 0.0, 0.0);
     
     InitCylinder(contexts[2], 255.0);
-    bodies[2].r = dvec3(10, 20, 10);
+    bodies[2].r = dvec3(10, 5, 10);
     bodies[2].q = dquat(1, 0, 0, 0);
     bodies[2].l = dvec3(0, 0, 0);
-    bodies[2].L = dvec3(20.0, 10.0, 30.0);
+    bodies[2].L = dvec3(200.0, 0.0, 0.0);
     
     for (auto &context : contexts) {
         context.ro_liquid = 977.0;
         context.ro_air = 1.2;
         context.g = 9.81;
         context.drag_coef_linear = 0.5;
-        context.drag_enabled = true;
+        context.drag_enabled = false;
         context.start_time = 0.0;
     }
     

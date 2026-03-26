@@ -10,7 +10,6 @@ using namespace glm;
 #define CYLINDER_RADIUS 0.6
 #define CYLINDER_HEIGHT 1.5
 
-// Типы тел
 enum BodyType {
     BODY_CUBE,
     BODY_SPHERE,
@@ -40,7 +39,6 @@ struct RigidBody {
     dquat q;                // ориентация
 };
 
-// Функции для расчета сил
 dvec3 CalculateForces(const RigidBody &rb, const Context &context, double time);
 dvec3 CalculateTorque(const RigidBody &rb, const Context &context, double time);
 double CalculateImmersedVolume(const RigidBody &rb, const Context &context);
@@ -53,3 +51,15 @@ double SolveRungeKutta4(RigidBody &rb, const Context &context, double h, double 
 void InitCube(Context &context, double mass);
 void InitSphere(Context &context, double mass);
 void InitCylinder(Context &context, double mass);
+
+dvec3 GetCylinderPointWorld(const RigidBody &rb, const dvec3 &local_point);
+void GetCylinderYRange(const RigidBody &rb, double radius, double height, double &min_y, double &max_y);
+double CalculateCylinderImmersedVolumeWithRotation(const RigidBody &rb, const Context &context, double y_water_level = 0.0);
+dvec3 CalculateCylinderImmersedCenter(const RigidBody &rb, const Context &context, double y_water_level = 0.0);
+dvec3 GetImmersedCenter(const RigidBody &rb, const Context &context);
+
+double CalculateCubeImmersedVolumeWithRotation(const RigidBody &rb, double y_water_level = 0.0);
+dvec3 CalculateCubeImmersedCenter(const RigidBody &rb, double y_water_level = 0.0);
+
+double CalculateSphereImmersedVolumeWithRotation(const RigidBody &rb, double y_water_level = 0.0);
+dvec3 CalculateSphereImmersedCenter(const RigidBody &rb, double y_water_level = 0.0);
