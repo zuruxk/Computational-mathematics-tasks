@@ -47,7 +47,7 @@ double CalculateCubeImmersedVolumeWithRotation(const RigidBody &rb, double y_wat
     if (max_y <= y_water_level) return 1.0;
     
     // Численное интегрирование по слоям
-    const int num_slices = 500000;
+    const int num_slices = 10000;
     double slice_height = CUBE_SIZE / num_slices;
     double immersed_volume = 0.0;
     double slice_volume = CUBE_SIZE * CUBE_SIZE * slice_height;
@@ -91,7 +91,7 @@ dvec3 CalculateCubeImmersedCenter(const RigidBody &rb, double y_water_level) {
     if (min_y >= y_water_level) return rb.r;
     if (max_y <= y_water_level) return rb.r;
     
-    const int num_slices = 500000;
+    const int num_slices = 10000;
     double slice_height = CUBE_SIZE / num_slices;
     double total_immersed_volume = 0.0;
     dvec3 weighted_sum(0.0);
@@ -122,7 +122,7 @@ double CalculateSphereImmersedVolumeWithRotation(const RigidBody &rb, double y_w
     if (max_y <= y_water_level) return 1.0;
     
     // Численное интегрирование по слоям для сферы
-    const int num_slices = 500000;
+    const int num_slices = 10000;
     double slice_height = 2.0 * R / num_slices;
     double immersed_volume = 0.0;
     
@@ -155,7 +155,7 @@ dvec3 CalculateSphereImmersedCenter(const RigidBody &rb, double y_water_level) {
     if (max_y <= y_water_level) return rb.r;
     
     // Численное интегрирование по слоям
-    const int num_slices = 500000;
+    const int num_slices = 10000;
     double slice_height = 2.0 * R / num_slices;
     double total_immersed_volume = 0.0;
     dvec3 weighted_sum(0.0);
@@ -406,7 +406,7 @@ double CalculateCylinderImmersedVolumeWithRotation(const RigidBody &rb, const Co
     if (min_y >= y_water_level) return 0.0;
     if (max_y <= y_water_level) return 1.0;
     
-    const int num_slices = 500000;
+    const int num_slices = 10000;
     double slice_height = height / num_slices;
     double immersed_volume = 0.0;
     
@@ -436,7 +436,7 @@ dvec3 CalculateCylinderImmersedCenter(const RigidBody &rb, const Context &contex
     if (min_y >= y_water_level) return rb.r;
     if (max_y <= y_water_level) return rb.r;
     
-    const int num_slices = 500000;
+    const int num_slices = 10000;
     double slice_height = height / num_slices;
     double total_immersed_volume = 0.0;
     dvec3 weighted_sum(0.0);
