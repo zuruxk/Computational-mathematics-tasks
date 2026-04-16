@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include <cmath>
+#include <random>
+#include <chrono>
 #include "modules/DotProduct/DotProduct.hpp"
 
 long double exact_dot(const std::vector<double>& a, const std::vector<double>& b) {
@@ -64,6 +66,76 @@ TEST(DotProductTest, DenormalNumbers) {
     double result2 = DotProduct::compute(a2, b2);
     
     EXPECT_DOUBLE_EQ(result2, 2.0 * min_denormal);
+}
+
+TEST(DotProductTest, LargeRandomVectors) {
+    std::mt19937_64 rng(std::chrono::steady_clock::now().time_since_epoch().count());
+    std::uniform_real_distribution<double> dist(-1e100, 1e100);
+    
+    size_t N = 100000;
+    
+    std::vector<double> a(N);
+    std::vector<double> b(N);
+    
+    for (size_t i = 0; i < N; ++i) {
+        a[i] = dist(rng);
+        b[i] = dist(rng);
+    }
+    
+    long double exact = exact_dot(a, b);
+    double expected = (double)exact;
+    
+    double result = DotProduct::compute(a, b);
+    
+    EXPECT_DOUBLE_EQ(result, expected);
+}
+
+TEST(DotProductTest, ExactZero) {
+    std::vector<double> a = {
+        1e100,
+        1.0,
+        -1e100,
+        -1.0
+    };
+    std::vector<double> b = {
+        1.0,
+        1.0,
+        1.0,
+        1.0
+    };
+        
+    double result = DotProduct::compute(a, b);
+    
+    EXPECT_DOUBLE_EQ(result, 0.0);
+    
+    double naive = 0.0;
+    for (size_t i = 0; i < a.size(); ++i) {
+        naive += a[i] * b[i];
+    }
+    
+    std::cout<<"Алгоритм: "<<result<<std::endl;
+    std::cout<<"Обычное вычисление: "<<naive<< std::endl;
+}
+
+TEST(DotProductTest, SubnormalPreserved) {
+    double subnormal = 1e-320;
+    
+    std::vector<double> a = {subnormal, 1e100, -1e100};
+    std::vector<double> b = {1.0, 1.0, 1.0};
+    
+    double result = DotProduct::compute(a, b);
+    
+    EXPECT_DOUBLE_EQ(result, subnormal);
+    
+    double naive = 0.0;
+    for (size_t i = 0; i < a.size(); ++i) {
+        naive += a[i] * b[i];
+    }
+    
+    EXPECT_EQ(naive, 0.0);
+
+    std::cout<<"Алгоритм: "<<result<<std::endl;
+    std::cout<<"Обычное вычисление: "<<naive<<std::endl;
 }
 
 int main() {

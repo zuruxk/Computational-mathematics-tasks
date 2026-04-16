@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 #include "modules/DotProduct/DotProduct.hpp"
 
 int main() {
@@ -14,6 +15,11 @@ int main() {
 
     std::cout<<"Прямое вычисление: "<<wrong<<std::endl;
     std::cout<<"Скалярное произведение: "<<result<<std::endl;
+
+    std::cout<<"Проверка long double\n";
+    std::cout<<"digits10: "<<std::numeric_limits<long double>::digits10<<std::endl;
+    std::cout<<"sizeof(long double): "<< sizeof(long double)<<" bytes"<<std::endl;
+    std::cout<<"sizeof(double): "<<sizeof(double)<<" bytes"<<std::endl;
     
     return 0;
 }
